@@ -1,0 +1,87 @@
+body {
+  min-height: 100vh;
+  background: url(/public/clean_sky.jpg);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.overlay {
+  height: 100vh;
+  background: hsla(0, 0%, 0%, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+main {
+  width: 25rem;
+  height: fit-content;
+  background: hsla(0, 0%, 100%, 0.1);
+  backdrop-filter: blur(1rem);
+  padding: 1.8rem 1.2rem;
+  border-radius: 0.8rem;
+  text-align: center;
+  color: white;
+}
+
+form {
+  margin-top: 2rem;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+input {
+  flex: 1 1 15rem;
+  padding: 0.8rem;
+  border-radius: 0.4rem;
+  border: none;
+}
+
+input:focus {
+  outline: 2px solid royalblue;
+}
+
+button {
+  flex: 1 1 5rem;
+  cursor: pointer;
+  padding: 0.8rem;
+  border-radius: 0.4rem;
+  border: none;
+  transition:
+    0.2s ease-out background-color,
+    0.2s ease-out color;
+}
+
+button:hover {
+  background-color: #34d679;
+  color: white;
+}
+
+.result {
+  margin-top: 2rem;
+}
+
+.result h2 {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.display_temperature {
+  font-size: 1.2rem;
+}
+
+.error {
+  margin-top: 1.2rem;
+  color: #ff6b6b;
+  background: hsla(0, 100%, 60%, 0.15);
+  border: 1px solid hsla(0, 100%, 60%, 0.4);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+}
