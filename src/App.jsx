@@ -1,85 +1,75 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { get_visuals } from "./getIcons";
+import Loading from "./components/Loading";
 import "./App.css";
-
-// Weather API: https://api.open-meteo.com/v1/forecast?latitude=-24.71361&longitude=-53.74306,&current_weather=true&timezone=auto
-// GeoCoding API: https://geocoding-api.open-meteo.com/v1/search?name=Berlin&count=10&language=pt&format=json
 
 function App() {
   const [cityInput, setCityInput] = useState("");
-  const [weather, setWeather] = useState("");
-  const [cityName, setCityName] = useState("");
-  const [weatherIcon, setWeatherIcon] = useState("");
-  const [countryCode, setCountryCode] = useState("");
   const [countryInput, setCountryInput] = useState("");
+
+  const [cityName, setCityName] = useState("");
+  const [countryCode, setCountryCode] = useState("");
+  const [weatherIcon, setWeatherIcon] = useState("");
+  const [weather, setWeather] = useState("");
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // função pra retornar o gif de fundo e o icon do clima
-  const get_visuals = (weather_code, is_day) => {
-    if (weather_code === 0)
-      return is_day
-        ? { icon: "☀️", bg: "/clean_sky.jpg" }
-        : { icon: "🌙", bg: "/clean_sky_night.mp4" };
+  useEffect(() => {
+    const saved_city = localStorage.getItem("last_city_search");
+    const saved_country = localStorage.getItem("last_city_country_code");
 
-    if (
-      (weather_code >= 1 && weather_code <= 3) ||
-      (weather_code >= 45 && weather_code <= 48)
-    )
-      // tratando parcialmente dublado como se fosse totalmente nublado... pq sim :)
-      return { icon: "⛅", bg: "/foggy.jpg" };
+    if (saved_city) setCityInput(saved_city);
+    if (saved_country) setCountryInput(saved_country);
+  }, []);
 
-    if (weather_code >= 51 && weather_code <= 67)
-      return { icon: "🌧️", bg: "/raining_background.gif" };
-
-    if (weather_code >= 80 && weather_code <= 82)
-      return { icon: "🌦️", bg: "/small_rain.gif" };
-
-    if (weather_code === 95) return { icon: "⛈️", bg: "/storm.gif" };
-
-    if (weather_code >= 71 && weather_code <= 77)
-      return { icon: "❄️", bg: "/snow.jpg" };
-
-    return { icon: "🌡️", bg: "/clean_sky.jpg" };
-  };
-
-  // função pra converter o nome da cidade em latitude, longitude
   const convert_city = async (city) => {
     const geo_res = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=10&language=pt&format=json`,
     ).then((res) => res.json());
 
+    if (!geo_res.results?.length) {
+      throw new Error("Cidade não encontrada.");
+    }
+
     if (countryInput) {
       const filtered = geo_res.results.find(
         (r) => r.country_code?.toLowerCase() === countryInput.toLowerCase(),
       );
-      return filtered || geo_res.results[0];
+
+      if (!filtered)
+        throw new Error("Cidade não encontrada para o país informado.");
+
+      return filtered;
     }
 
     return geo_res.results[0];
   };
-
-  const handle_country_change = (e) => setCountryInput(e.target.value);
-  const handle_change = (e) => setCityInput(e.target.value);
 
   const fetch_city_weather = async (lat, lon) => {
     const weather_res = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`,
     ).then((res) => res.json());
 
+    console.log(weather_res);
+
     return weather_res.current_weather;
   };
 
-  const handle_submit = async (e) => {
-    e.preventDefault();
+  const get_results = async (city) => {
+    if (!city) {
+      setError("Informe o nome de uma cidade.");
+      return;
+    }
+
+    setLoading(true);
     setError("");
-    setWeather("");
 
     try {
-      const city_data = await convert_city(cityInput);
+      const city_data = await convert_city(city);
 
-      if (!city_data) {
-        setError("Cidade não encontrada. Tente outro nome ou país.");
-        return;
-      }
+      setCityName(city_data.name);
+      setCountryCode(city_data.country_code);
 
       const current_weather = await fetch_city_weather(
         city_data.latitude,
@@ -87,65 +77,82 @@ function App() {
       );
 
       setWeather(current_weather);
-      setCityName(city_data.name);
-      setCountryCode(city_data.country_code);
 
       const { icon, bg } = get_visuals(
         current_weather.weathercode,
         current_weather.is_day,
       );
       setWeatherIcon(icon);
+
       document.body.style.background = `url(${bg})`;
-      document.body.style.backgroundRepeat = `no-repeat`;
-      document.body.style.backgroundSize = `cover`;
-      document.body.style.backgroundPosition = `center`;
+      document.body.style.backgroundRepeat = "no-repeat";
+      document.body.style.backgroundSize = "cover";
+      document.body.style.backgroundPosition = "center";
     } catch (err) {
       setError(
-        "Erro ao buscar dados. Verifique sua conexão e tente novamente.",
+        err.message ||
+          "Erro ao buscar dados. Verifique sua conexão e tente novamente.",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handle_submit = async (e) => {
+    e.preventDefault();
+    setWeather("");
+
+    if (!cityInput) {
+      setError("Erro ao buscar dados. Informe o nome de uma cidade.");
+      return;
+    }
+
+    await get_results(cityInput);
+
+    localStorage.setItem("last_city_search", cityInput);
+    localStorage.setItem("last_city_country_code", countryInput);
+  };
+
   return (
-    <>
-      <div className="overlay">
-        <main>
-          <h1>Weather APP :)</h1>
+    <div className="overlay">
+      <main>
+        <h1>Weather APP :)</h1>
 
-          <form onSubmit={handle_submit}>
-            <input
-              type="text"
-              onChange={handle_change}
-              value={cityInput}
-              placeholder="Digite o nome da cidade..."
-            />
-            <input
-              type="text"
-              onChange={handle_country_change}
-              value={countryInput}
-              placeholder="País (ex: BR, US)..."
-              maxLength={2}
-              style={{ textTransform: "uppercase" }}
-            />
-            <button type="submit">Consultar</button>
-          </form>
+        <form onSubmit={handle_submit}>
+          <input
+            type="text"
+            onChange={(e) => setCityInput(e.target.value)}
+            value={cityInput}
+            placeholder="Digite o nome da cidade..."
+          />
+          <input
+            type="text"
+            onChange={(e) => setCountryInput(e.target.value)}
+            value={countryInput}
+            placeholder="País (ex: BR, US)..."
+            maxLength={2}
+            style={{ textTransform: "uppercase" }}
+          />
+          <button type="submit">Consultar</button>
+        </form>
 
-          {error && <p className="error">{error}</p>}
+        {error && <p className="error">{error}</p>}
 
-          {weather && (
-            <div className="result">
-              <h2>
-                {cityName}
-                <img src={`https://flagsapi.com/${countryCode}/flat/32.png`} />
-              </h2>
-              <p className="display_temperature">
-                <span>{weatherIcon}</span> {weather.temperature} °C
-              </p>
-            </div>
-          )}
-        </main>
-      </div>
-    </>
+        {loading && <Loading />}
+
+        {weather && (
+          <div className="result">
+            <h2>
+              {cityName}
+              <img src={`https://flagsapi.com/${countryCode}/flat/32.png`} />
+            </h2>
+            <p className="display_temperature">
+              <span>{weatherIcon}</span> {weather.temperature} °C
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
