@@ -51,8 +51,6 @@ function App() {
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`,
     ).then((res) => res.json());
 
-    console.log(weather_res);
-
     return weather_res.current_weather;
   };
 
